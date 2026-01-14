@@ -5,6 +5,7 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles
 
+import random
 
 @cocotb.test()
 async def test_project(dut):
@@ -15,6 +16,13 @@ async def test_project(dut):
     cocotb.start_soon(clock.start())
 
     # Reset
+    reset(dut)
+
+    dut._log.info("Test project behavior")
+
+    await test_encode(dut)
+
+async def reset(dut):
     dut._log.info("Reset")
     dut.ena.value = 1
     dut.ui_in.value = 0
@@ -23,18 +31,18 @@ async def test_project(dut):
     await ClockCycles(dut.clk, 10)
     dut.rst_n.value = 1
 
-    dut._log.info("Test project behavior")
+async def test_encode(dut):
+    reset(dut)
 
-    # Set the input values you want to test
-    dut.ui_in.value = 20
-    dut.uio_in.value = 30
+    msg = random.randint(0, 2 ** 7 - 1)
 
-    # Wait for one clock cycle to see the output values
+    dut._log.info(f"Encoding message: {msg:07b}")
+
+    dut.ui_in.value = msg << 1 + 1  # Set encode_enable
+
     await ClockCycles(dut.clk, 1)
 
-    # The following assersion is just an example of how to check the output values.
-    # Change it to match the actual expected output of your module:
-    assert dut.uo_out.value == 50
+    msg_out = dut.uo_out.value.to_unsigned() >> 1
+    parity_out = dut.uio_out.value.to_unsigned()
 
-    # Keep testing the module by changing the input values, waiting for
-    # one or more clock cycles, and asserting the expected output values.
+    dut._log.info(f"Encoded output: {msg_out:07b}, Parity: {parity_out:08b}")

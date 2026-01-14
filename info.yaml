@@ -11,7 +11,7 @@ project:
   tiles: "1x1"          # Valid values: 1x1, 1x2, 2x2, 3x2, 4x2, 6x2 or 8x2
 
   # Your top module name must start with "tt_um_". Make it unique by including your github username:
-  top_module:  "tt_um_example"
+  top_module:  "tt_um_bch_code_15_7_2"
 
   # List your project's source files here.
   # Source files must be in ./src and you must list each source file separately, one per line.
@@ -23,34 +23,34 @@ project:
 # This section is for the datasheet/website. Use descriptive names (e.g., RX, TX, MOSI, SCL, SEG_A, etc.).
 pinout:
   # Inputs
-  ui[0]: ""
-  ui[1]: ""
-  ui[2]: ""
-  ui[3]: ""
-  ui[4]: ""
-  ui[5]: ""
-  ui[6]: ""
-  ui[7]: ""
+  ui[0]: "data_in_0"
+  ui[1]: "data_in_1"
+  ui[2]: "data_in_2"
+  ui[3]: "data_in_3"
+  ui[4]: "data_in_4"
+  ui[5]: "data_in_5"
+  ui[6]: "data_in_6"
+  ui[7]: "encode_enable"
 
   # Outputs
-  uo[0]: ""
-  uo[1]: ""
-  uo[2]: ""
-  uo[3]: ""
-  uo[4]: ""
-  uo[5]: ""
-  uo[6]: ""
+  uo[0]: "data_out_0"
+  uo[1]: "data_out_1"
+  uo[2]: "data_out_2"
+  uo[3]: "data_out_3"
+  uo[4]: "data_out_4"
+  uo[5]: "data_out_5"
+  uo[6]: "data_out_6"
   uo[7]: ""
 
   # Bidirectional pins
-  uio[0]: ""
-  uio[1]: ""
-  uio[2]: ""
-  uio[3]: ""
-  uio[4]: ""
-  uio[5]: ""
-  uio[6]: ""
-  uio[7]: ""
+  uio[0]: "parity_in_0"
+  uio[1]: "parity_in_1"
+  uio[2]: "parity_in_2"
+  uio[3]: "parity_in_3"
+  uio[4]: "parity_in_4"
+  uio[5]: "parity_in_5"
+  uio[6]: "parity_in_6"
+  uio[7]: "parity_in_7"
 
 # Do not change!
 yaml_version: 6

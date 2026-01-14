@@ -16,11 +16,11 @@ async def test_project(dut):
     cocotb.start_soon(clock.start())
 
     # Reset
-    reset(dut)
+    await reset(dut)
 
     dut._log.info("Test project behavior")
 
-    await test_encode(dut)
+    await test_encode(dut, 22, 175)
 
 async def reset(dut):
     dut._log.info("Reset")
@@ -31,18 +31,19 @@ async def reset(dut):
     await ClockCycles(dut.clk, 10)
     dut.rst_n.value = 1
 
-async def test_encode(dut):
-    reset(dut)
-
-    msg = random.randint(0, 2 ** 7 - 1)
+async def test_encode(dut, msg, checksum):
+    await reset(dut)
 
     dut._log.info(f"Encoding message: {msg:07b}")
 
-    dut.ui_in.value = msg << 1 + 1  # Set encode_enable
+    dut.ui_in.value = msg + 2 ** 7  # Set encode_enable
 
     await ClockCycles(dut.clk, 1)
 
-    msg_out = dut.uo_out.value.to_unsigned() >> 1
+    msg_out = dut.uo_out.value.to_unsigned()
     parity_out = dut.uio_out.value.to_unsigned()
+
+    assert msg_out == msg, f"Encoded message mismatch: got {msg_out:07b}, expected {msg:07b}"
+    assert parity_out == checksum, f"Encoded parity mismatch: got {parity_out:08b}, expected {checksum:08b}"
 
     dut._log.info(f"Encoded output: {msg_out:07b}, Parity: {parity_out:08b}")

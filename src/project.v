@@ -16,36 +16,40 @@ module tt_um_bch_code_15_7_2 (
     input  wire       rst_n     // reset_n - low to reset
 );
 
-  // If encode enabled
-  if (ui_in[7]) begin
-    assign uio_oe = 8'b0;
-    gf16_bch_encoder encoder_inst (
-        .message(ui_in[6:0]),
-        .parity(uio_out)
-    );
-    assign uo_out = ui_in;
-  end
+  wire [7:0] encoder_parity;
+  wire [6:0] corrected_message; // Placeholder for future decoder
+  wire mode_encode;             // 1 = Encode, 0 = Decode
 
-  // If encode disabled
-  else begin
-    assign uio_oe = 8'b11111111;
+  assign mode_encode = ui_in[7]; // MSB controls mode
 
-    // Check if error exists
-    
-    // If message is corrupted
+  gf16_bch_encoder encoder_inst (
+      .message(ui_in[6:0]),
+      .parity (encoder_parity)
+  );
 
-    // Calculate syndrome
+  assign uio_oe = mode_encode ? 8'b11111111 : 8'b00000000;
 
-    // Error locator polynomial
+  assign uio_out = mode_encode ? encoder_parity : 8'b00000000;
 
-    // Flip bits accordingly
+  assign uo_out[6:0] = mode_encode ? ui_in[6:0] : corrected_message;
+  assign uo_out[7] = 1'b0; // Unused
 
-    assign uo_out = ui_in;
-    assign uio_out = uio_in;
-  end
+  assign corrected_message = ui_in; 
+
+
+  // Check if error exists
+  
+  // If message is corrupted
+
+  // Calculate syndrome
+
+  // Error locator polynomial
+
+  // Flip bits accordingly
+
 
   // List all unused inputs to prevent warnings
-  wire _unused = &{ena, clk, rst_n, uo_out[7], 1'b0};
+  wire _unused = &{ena, clk, rst_n, 1'b0};
 
 endmodule
 

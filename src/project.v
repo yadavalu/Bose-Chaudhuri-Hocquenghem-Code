@@ -312,7 +312,7 @@ module bch_chien_search_roots (
   reg [3:0] pos1_reg;
   reg [3:0] pos2_reg;
   reg pos1_found;
-  reg [3:0] term1_pow, term2_pow;
+  reg [3:0] term1_val, term2_val;
   reg [3:0] eval;
 
   always @(*) begin 
@@ -324,20 +324,14 @@ module bch_chien_search_roots (
     //eval = 4'b0;
 
     for (i = 0; i <= 14; i = i + 1) begin 
-      if (sigma_1 == 4'd0 && sigma_2 == 4'd0) begin
-        // No errors
-        eval = 4'd1;
-      end else if (sigma_2 == 4'd0) begin
-        // Single error case
-        term1_pow = (value_to_power(sigma_1) + 15 - i) % 15;
-        eval = (sigma_0) ^ alpha_power(term1_pow);
-      end else begin
-        // Two error case
-        term1_pow = (value_to_power(sigma_1) + 15 - i) % 15;
-        term2_pow = (value_to_power(sigma_2) + (2 * (15 - i))) % 15;
-        eval = (sigma_0) ^ alpha_power(term1_pow) ^ alpha_power(term2_pow);
-      end
+      if (sigma_1 == 4'd0) term1_val = 4'd0;
+      else term1_val = alpha_power((value_to_power(sigma_1) + 15 - i) % 15);
 
+      if (sigma_2 == 4'd0) term2_val = 4'd0;
+      else term2_val = alpha_power((value_to_power(sigma_2) + 2 * (15 - i)) % 15);
+
+      eval = sigma_0 ^ term1_val ^ term2_val;
+      
       if (eval == 4'd0) begin
         if (pos1_found) begin
           pos2_reg = i[3:0];

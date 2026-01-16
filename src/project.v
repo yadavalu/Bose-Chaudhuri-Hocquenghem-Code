@@ -30,9 +30,7 @@ module tt_um_bch_code_15_7_2 (
   assign received_poly = {ui_in[6:0], uio_in[7:0]};
 
   wire [7:0] corrected_message;
-  
-  assign uo_out[7] = 0;
-  
+    
   assign mode_encode = ui_in[7]; 
 
   gf16_bch_encoder encoder_inst (
@@ -319,9 +317,9 @@ module bch_chien_search_roots (
     pos1_reg = 4'b0;
     pos2_reg = 4'b0;
     pos1_found = 1'b0;
-    //term1_pow = 4'b0;  // redundant
-    //term2_pow = 4'b0;
-    //eval = 4'b0;
+    term1_val = 4'b0;  // redundant
+    term2_val = 4'b0;
+    eval = 4'b0;
 
     for (i = 0; i <= 14; i = i + 1) begin 
       if (sigma_1 == 4'd0) term1_val = 4'd0;

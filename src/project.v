@@ -18,21 +18,20 @@ module tt_um_bch_code_15_7_2 (
 
   // Wires for internal signals
   wire mode_encode;
+  assign mode_encode = ui_in[7]; 
   wire [7:0] encoder_parity;
   wire error_detected;
 
   wire [14:0] received_poly;
-  wire [3:0] S1, S3;
+  assign received_poly = {ui_in[6:0], uio_in[7:0]};
 
+  wire [3:0] S1, S3;
   wire [11:0] error_locator;
   wire [3:0] error_pos_1, error_pos_2;
 
-  assign received_poly = {ui_in[6:0], uio_in[7:0]};
-
   wire [7:0] corrected_message;
-    
-  assign mode_encode = ui_in[7]; 
-
+  
+  // TODO add enable pins to modules that do not need to be run
   gf16_bch_encoder encoder_inst (
     .message(ui_in[6:0]),
     .parity (encoder_parity)
@@ -63,13 +62,13 @@ module tt_um_bch_code_15_7_2 (
   );
 
   assign corrected_message = received_poly[14:8] ^ 
-                             ((error_pos_1 >= 8) ? (7'b1 << (error_pos_1 - 8)) : 7'b0) ^  // due to bit arrangement
-                             ((error_pos_2 >= 8) ? (7'b1 << (error_pos_2 - 8)) : 7'b0);
+                             ((error_pos_1 >= 8) ? (7'd1 << (error_pos_1 - 8)) : 7'b0) ^  // due to bit arrangement
+                             ((error_pos_2 >= 8) ? (7'd1 << (error_pos_2 - 8)) : 7'b0);
 
   assign uio_oe  = mode_encode ? 8'b11111111   : 8'b0;
   assign uio_out = mode_encode ? encoder_parity : 8'b0;
 
-  assign uo_out[6:0] = mode_encode ? ui_in[6:0] : corrected_message; 
+  assign uo_out[6:0] = mode_encode ? ui_in[6:0] : (error_detected ? corrected_message : ui_in[6:0]); 
   assign uo_out[7]   = 1'b0;
 
   // List all unused inputs to prevent warnings
@@ -126,7 +125,7 @@ module bch_syndrome_calculator (
   function [3:0] alpha_power;
     input [3:0] power;
     begin
-      case (power % 15)
+      case (power)
         4'd0:  alpha_power = 4'd1;
         4'd1:  alpha_power = 4'd2;
         4'd2:  alpha_power = 4'd4;
@@ -158,10 +157,13 @@ module bch_syndrome_calculator (
     for (i = 0; i < 15; i = i + 1) begin
       if (received_poly[i]) begin
         s1_reg = s1_reg ^ alpha_power(i);
-        s3_reg = s3_reg ^ alpha_power(3 * i);
+        s3_reg = s3_reg ^ alpha_power((3 * i) % 15);
       end
     end
   end
+
+  assign S1 = s1_reg;
+  assign S3 = s3_reg;
 
 endmodule
 
@@ -174,7 +176,7 @@ module bch_error_locator (
   function [3:0] alpha_power;
     input [3:0] power;
     begin
-      case (power % 15)
+      case (power)
         4'd0:  alpha_power = 4'd1;
         4'd1:  alpha_power = 4'd2;
         4'd2:  alpha_power = 4'd4;
@@ -212,6 +214,8 @@ module bch_error_locator (
         4'd7:  value_to_power = 4'd10;
         4'd14: value_to_power = 4'd11;
         4'd15: value_to_power = 4'd12;
+        4'd13: value_to_power = 4'd13;
+        4'd9:  value_to_power = 4'd14;
         default: value_to_power = 4'd0; // Placeholder for error handling
       endcase
     end
@@ -223,6 +227,7 @@ module bch_error_locator (
 
   // Galois Field arithmetic:
   // + = ^
+  // * = +
   // ** = *
 
   assign s1_pow = value_to_power(S1);
@@ -232,7 +237,7 @@ module bch_error_locator (
   always @(*) begin
     sigma_1 = S1;
     
-    if (numerator == 0) begin  // || S1 == 0
+    if (numerator == 0 || S1 == 0) begin  // Avoid searching for zero in value to power 
       sigma_2 = 4'b0;
     end else begin
       sigma_2 = alpha_power((value_to_power(numerator) + s1_inv_pow) % 15);
@@ -254,7 +259,7 @@ module bch_chien_search_roots (
   function [3:0] alpha_power;
     input [3:0] power;
     begin
-      case (power % 15)
+      case (power)
         4'd0:  alpha_power = 4'd1;
         4'd1:  alpha_power = 4'd2;
         4'd2:  alpha_power = 4'd4;
@@ -292,14 +297,11 @@ module bch_chien_search_roots (
         4'd7:  value_to_power = 4'd10;
         4'd14: value_to_power = 4'd11;
         4'd15: value_to_power = 4'd12;
+        4'd13: value_to_power = 4'd13;
+        4'd9:  value_to_power = 4'd14;
         default: value_to_power = 4'd0; // Placeholder for error handling
       endcase
     end
-  endfunction
-
-  function [3:0] reciprocal;
-    input [3:0] value;
-    reciprocal = alpha_power((15 - value_to_power(value)) % 15);
   endfunction
 
   wire [3:0] sigma_2 = error_locator[11:8];
@@ -362,8 +364,8 @@ module gf16_divider (
     quot = 8'b0;
 
     for (i = 14; i >= 8; i = i - 1) begin
-      if (rem[i] == 1'b1) begin // [i -: 4] start at i select 4 bits downwards
-        rem[i -: 9] = rem[i -: 9] ^ divisor;
+      if (rem[i] == 1'b1) begin
+        rem[i -: 9] = rem[i -: 9] ^ divisor;  // [i -: 9] start at i select 9 bits downwards
         quot[i - 8] = 1'b1;
       end
     end

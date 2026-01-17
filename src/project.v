@@ -232,7 +232,8 @@ module bch_error_locator (
 
   assign s1_pow = value_to_power(S1);
   assign s1_inv_pow = (15 - s1_pow) % 15;  // GF(16) inverse
-  assign numerator = S3 ^ alpha_power((s1_pow * 3) % 15);  // only calculate numerator to handle div bz 0
+  // only calculate numerator to handle div bz 0
+  assign numerator = S3 ^ alpha_power((s1_pow * 8'd3) % 15);  // 8'd3 to avoid truncation and force wider bit width
 
   always @(*) begin
     sigma_1 = S1;
@@ -328,7 +329,7 @@ module bch_chien_search_roots (
       else term1_val = alpha_power((value_to_power(sigma_1) + 15 - i) % 15);
 
       if (sigma_2 == 4'd0) term2_val = 4'd0;
-      else term2_val = alpha_power((value_to_power(sigma_2) + 2 * (15 - i)) % 15);
+      else term2_val = alpha_power((value_to_power(sigma_2) + 8'd2 * (15 - i)) % 15);  // 8'd2 to avoid truncation
 
       eval = sigma_0 ^ term1_val ^ term2_val;
       

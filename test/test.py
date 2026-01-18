@@ -12,19 +12,20 @@ import random
 bch_checksums = {
     # Decimal Message: Decimal Checksum
     0:   0,    # 0000000 -> 00000000
-    #1:   209,  # 0000001 -> 11010001
+    1:   209,  # 0000001 -> 11010001
     2:   115,  # 0000010 -> 01110011
-    #3:   162,  # 0000011 -> 10100010
+    3:   162,  # 0000011 -> 10100010
     4:   230,  # 0000100 -> 11100110
-    #5:   55,   # 0000101 -> 00110111
+    5:   55,   # 0000101 -> 00110111
     6:   149,  # 0000110 -> 10010101
+    7:   68,
     10:  110,  # 0001010 -> 01101110
     16:  58,   # 0010000 -> 00111010
     20:  220,  # 0010100 -> 11011100
     22:  175,  # 0010110 -> 10101111
     32:  116,  # 0100000 -> 01110100
     64:  232,  # 1000000 -> 11101000
-    #127: 255   # 1111111 -> 11111111
+    127: 255   # 1111111 -> 11111111
 }
 
 
@@ -40,12 +41,12 @@ async def test_project(dut):
     await reset(dut)
 
     dut._log.info("Test project behavior")
-
-    await test_encode(dut, 22, 175)
-    await test_correction(dut, 22, 175)
+    
     for i, v in bch_checksums.items():
         await test_encode(dut, i, v)
-        await test_correction(dut, i, v)
+        await test_correction_2_err(dut, i, v)
+        await test_correction_1_err(dut, i, v)
+        await test_correction_no_err(dut, i, v)
 
 
 async def reset(dut):
@@ -57,7 +58,7 @@ async def reset(dut):
     await ClockCycles(dut.clk, 10)
     dut.rst_n.value = 1
 
-async def test_correction(dut, msg, checksum, err1=None, err2=None):
+async def test_correction_2_err(dut, msg, checksum, err1=None, err2=None):
     if err1 is None and err2 is None:
         err1 = random.randint(0, 14)
         err2 = random_exclude(0, 14, {err1})
@@ -69,9 +70,9 @@ async def test_correction(dut, msg, checksum, err1=None, err2=None):
     msg_corrupted = msg_with_checksum ^ (1 << err1) ^ (1 << err2)
     dut._log.info(f"Corrupted at positions: {err1}, {err2}, Corrupted message: {msg_corrupted:015b}")
     
-    # 111111100000000 = 0x7E00
-    # 000000011111111 = 0x00FF
-    dut.ui_in.value = (msg_corrupted & 0x7E00) >> 8  # Upper 7 bits
+    # 0111111100000000 = 0x7F00
+    # 0000000011111111 = 0x00FF
+    dut.ui_in.value = (msg_corrupted & 0x7F00) >> 8  # Upper 7 bits
     dut.uio_in.value = msg_corrupted & 0x00FF        # Lower 8 bits
 
     await ClockCycles(dut.clk, 1)
@@ -82,6 +83,50 @@ async def test_correction(dut, msg, checksum, err1=None, err2=None):
     assert msg_out == msg, f"Corrected message mismatch: expected {msg:07b}, got {msg_out:07b}"
 
     dut._log.info(f"Successfully recovered original message: {msg_out:07b}")
+
+async def test_correction_1_err(dut, msg, checksum, err1=None):
+    if err1 is None:
+        err1 = random.randint(0, 14)
+
+    await reset(dut)
+
+    dut._log.info(f"Correcting message: {msg:07b}, Checksum: {checksum:08b}")
+    msg_with_checksum = (msg << 8) | checksum
+    msg_corrupted = msg_with_checksum ^ (1 << err1)
+    dut._log.info(f"Corrupted at positions: {err1}, Corrupted message: {msg_corrupted:015b}")
+    
+    # 0111111100000000 = 0x7F00
+    # 0000000011111111 = 0x00FF
+    dut.ui_in.value = (msg_corrupted & 0x7F00) >> 8  # Upper 7 bits
+    dut.uio_in.value = msg_corrupted & 0x00FF        # Lower 8 bits
+
+    await ClockCycles(dut.clk, 1)
+
+    msg_out = dut.uo_out.value.to_unsigned()
+    checksum_out = dut.uio_out.value.to_unsigned()
+
+    assert msg_out == msg, f"Corrected message mismatch: expected {msg:07b}, got {msg_out:07b}"
+
+    dut._log.info(f"Successfully recovered original message: {msg_out:07b}")
+
+async def test_correction_no_err(dut, msg, checksum):
+    await reset(dut)
+
+    dut._log.info(f"Flawless message: {msg:07b}, Checksum: {checksum:08b}")
+    msg_with_checksum = (msg << 8) | checksum
+    
+    dut.ui_in.value = msg
+    dut.uio_in.value = checksum
+
+    await ClockCycles(dut.clk, 1)
+
+    msg_out = dut.uo_out.value.to_unsigned()
+    checksum_out = dut.uio_out.value.to_unsigned()
+
+    assert msg_out == msg, f"Corrected message mismatch: expected {msg:07b}, got {msg_out:07b}"
+
+    dut._log.info(f"Successfully recovered original message: {msg_out:07b}")
+
 
 
 async def test_encode(dut, msg, checksum):

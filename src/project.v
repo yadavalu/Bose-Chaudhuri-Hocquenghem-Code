@@ -221,8 +221,7 @@ module bch_error_locator (
     end
   endfunction
 
-  reg [3:0] sigma_1;
-  reg [3:0] sigma_2;
+  reg [3:0] sigma_1, sigma_2;
   wire [3:0] s1_pow, s1_inv_pow, numerator;
 
   // Galois Field arithmetic:
@@ -320,7 +319,7 @@ module bch_chien_search_roots (
     pos1_reg = 4'b0;
     pos2_reg = 4'b0;
     pos1_found = 1'b0;
-    term1_val = 4'b0;  // redundant
+    term1_val = 4'b0;
     term2_val = 4'b0;
     eval = 4'b0;
 
@@ -352,27 +351,22 @@ endmodule
 module gf16_divider (
   input [14:0] dividend,
   input [8:0] divisor,
-  output [14:0] remainder,
-  output [7:0] quotient
+  output [14:0] remainder
 );
 
   reg [14:0] rem;
-  reg [7:0] quot;
   integer i;
 
   always @(*) begin
     rem = dividend;
-    quot = 8'b0;
 
     for (i = 14; i >= 8; i = i - 1) begin
       if (rem[i] == 1'b1) begin
         rem[i -: 9] = rem[i -: 9] ^ divisor;  // [i -: 9] start at i select 9 bits downwards
-        quot[i - 8] = 1'b1;
       end
     end
   end
   assign remainder = rem;
-  assign quotient = quot;
 
 endmodule
 

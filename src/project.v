@@ -29,7 +29,7 @@ module tt_um_bch_code_15_7_2 (
   wire [11:0] error_locator;
   wire [3:0] error_pos_1, error_pos_2;
 
-  wire [7:0] corrected_message;
+  wire [6:0] corrected_message;
   
   // TODO add enable pins to modules that do not need to be run
   gf16_bch_encoder encoder_inst (
@@ -61,9 +61,13 @@ module tt_um_bch_code_15_7_2 (
     .error_pos_2(error_pos_2)
   );
 
+  wire [7:0] error_mask_1, error_mask_2;
+  assign error_mask_1 = 8'd1 << (error_pos_1 - 8);
+  assign error_mask_2 = 8'd1 << (error_pos_2 - 8);
+
   assign corrected_message = received_poly[14:8] ^ 
-                             ((error_pos_1 >= 8) ? (7'd1 << (error_pos_1 - 8)) : 7'b0) ^  // due to bit arrangement
-                             ((error_pos_2 >= 8) ? (7'd1 << (error_pos_2 - 8)) : 7'b0);
+                             ((error_pos_1 >= 8) ? error_mask_1[6:0] : 7'b0) ^
+                             ((error_pos_2 >= 8) ? error_mask_2[6:0] : 7'b0);
 
   assign uio_oe  = mode_encode ? 8'b11111111   : 8'b0;
   assign uio_out = mode_encode ? encoder_parity : 8'b0;
@@ -148,6 +152,7 @@ module bch_syndrome_calculator (
 
   reg [3:0] s1_reg;
   reg [3:0] s3_reg;
+  reg [7:0] overflow;
   integer i;
 
   always @(*) begin 
@@ -156,8 +161,9 @@ module bch_syndrome_calculator (
 
     for (i = 0; i < 15; i = i + 1) begin
       if (received_poly[i]) begin
-        s1_reg = s1_reg ^ alpha_power(i);
-        s3_reg = s3_reg ^ alpha_power((3 * i) % 15);
+        s1_reg = s1_reg ^ alpha_power(i[3:0]);
+        overflow = (8'd3 * i[7:0]) % 8'd15;
+        s3_reg = s3_reg ^ alpha_power(overflow[3:0]);
       end
     end
   end
@@ -231,8 +237,10 @@ module bch_error_locator (
 
   assign s1_pow = value_to_power(S1);
   assign s1_inv_pow = (15 - s1_pow) % 15;  // GF(16) inverse
+  wire [7:0] exponent;
+  assign exponent = (s1_pow * 8'd3) % 15;
   // only calculate numerator to handle div bz 0
-  assign numerator = S3 ^ alpha_power((s1_pow * 8'd3) % 15);  // 8'd3 to avoid truncation and force wider bit width
+  assign numerator = S3 ^ alpha_power(exponent[3:0]);  // 8'd3 to avoid truncation and force wider bit width
 
   always @(*) begin
     sigma_1 = S1;
@@ -313,6 +321,7 @@ module bch_chien_search_roots (
   reg [3:0] pos2_reg;
   reg pos1_found;
   reg [3:0] term1_val, term2_val;
+  reg [7:0] term1_help1, term2_help1, term1_help2, term2_help2;
   reg [3:0] eval;
 
   always @(*) begin 
@@ -321,14 +330,28 @@ module bch_chien_search_roots (
     pos1_found = 1'b0;
     term1_val = 4'b0;
     term2_val = 4'b0;
+    term1_help1 = 8'b0;
+    term1_help2 = 8'b0;
+    term2_help1 = 8'b0;
+    term2_help2 = 8'b0;
     eval = 4'b0;
 
     for (i = 0; i <= 14; i = i + 1) begin 
-      if (sigma_1 == 4'd0) term1_val = 4'd0;
-      else term1_val = alpha_power((value_to_power(sigma_1) + 15 - i) % 15);
+      if (sigma_1 == 4'd0) begin
+        term1_val = 4'd0;
+      end else begin
+        term1_help1 = {4'b0, value_to_power(sigma_1)};
+        term1_help2 = (term1_help1 + 8'd15 - i[7:0]) % 8'd15;
+        term1_val = alpha_power(term1_help2[3:0]);
+      end
 
-      if (sigma_2 == 4'd0) term2_val = 4'd0;
-      else term2_val = alpha_power((value_to_power(sigma_2) + 8'd2 * (15 - i)) % 15);  // 8'd2 to avoid truncation
+      if (sigma_2 == 4'd0) begin
+        term2_val = 4'd0;
+      end else begin
+        term2_help1 = {4'b0, value_to_power(sigma_2)};
+        term2_help2 = (term2_help1 + 8'd2 * (8'd15 - i[7:0])) % 8'd15;
+        term2_val = alpha_power(term2_help2[3:0]);
+      end
 
       eval = sigma_0 ^ term1_val ^ term2_val;
       

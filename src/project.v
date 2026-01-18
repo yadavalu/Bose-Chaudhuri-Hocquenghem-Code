@@ -158,6 +158,7 @@ module bch_syndrome_calculator (
   always @(*) begin 
     s1_reg = 4'd0;
     s3_reg = 4'd0;
+    overflow = 8'd0;
 
     for (i = 0; i < 15; i = i + 1) begin
       if (received_poly[i]) begin

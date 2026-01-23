@@ -76,7 +76,7 @@ module tt_um_bch_code_15_7_2 (
   assign uo_out[7]   = 1'b0;
 
   // List all unused inputs to prevent warnings
-  wire _unused = &{ena, clk, rst_n, 1'b0};
+  wire _unused = &{ena, clk, rst_n, error_mask_1[7], error_mask_2[7], 1'b0};
 
 endmodule
 
@@ -97,6 +97,8 @@ module gf16_bch_encoder (
 
   assign parity = full_remainder[7:0]; 
 
+  wire _unused = &{ full_remainder[14:8] };
+
 endmodule
 
 module gf16_bch_find_error (
@@ -104,19 +106,21 @@ module gf16_bch_find_error (
     output wire error_detected 
 );
 
-    localparam [8:0] GEN_MASK = 9'b111010001; 
-    
-    wire [14:0]  final_remainder;
+  localparam [8:0] GEN_MASK = 9'b111010001; 
+  
+  wire [14:0]  final_remainder;
 
-    gf16_divider divider_inst (
-        .dividend(received_poly),
-        .divisor(GEN_MASK),
-        .remainder(final_remainder)
-        //.quotient()
-    );
+  gf16_divider divider_inst (
+      .dividend(received_poly),
+      .divisor(GEN_MASK),
+      .remainder(final_remainder)
+      //.quotient()
+  );
 
-    // Check if remainder is non-zero
-    assign error_detected = (final_remainder[7:0] != 8'b0);
+  // Check if remainder is non-zero
+  assign error_detected = (final_remainder[7:0] != 8'b0);
+
+  wire _unused = &{ final_remainder[14:8] };
 
 endmodule
 
@@ -171,6 +175,8 @@ module bch_syndrome_calculator (
 
   assign S1 = s1_reg;
   assign S3 = s3_reg;
+
+  wire _unused = &{ overflow[7:4] };
 
 endmodule
 
@@ -256,6 +262,8 @@ module bch_error_locator (
 
   // L(x) = sigma_2 * x^2 + sigma_1 * x + 1
   assign error_locator = {sigma_2, sigma_1, 4'b1};
+
+  wire _unused = &{ exponent[7:4] };
 
 endmodule
 
@@ -369,6 +377,8 @@ module bch_chien_search_roots (
 
   assign error_pos_1 = pos1_reg;
   assign error_pos_2 = pos2_reg;
+
+  wire _unused = &{ term1_help2[7:4], term2_help2[7:4] };
 
 endmodule
 

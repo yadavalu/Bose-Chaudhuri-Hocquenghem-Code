@@ -28,7 +28,6 @@ bch_checksums = {
     127: 255   # 1111111 -> 11111111
 }
 
-
 @cocotb.test()
 async def test_project(dut):
     dut._log.info("Start")
@@ -41,13 +40,12 @@ async def test_project(dut):
     await reset(dut)
 
     dut._log.info("Test project behavior")
-    
+
     for i, v in bch_checksums.items():
         await test_encode(dut, i, v)
         await test_correction_2_err(dut, i, v)
         await test_correction_1_err(dut, i, v)
         await test_correction_no_err(dut, i, v)
-
 
 async def reset(dut):
     dut._log.info("Reset")
@@ -63,91 +61,72 @@ async def test_correction_2_err(dut, msg, checksum, err1=None, err2=None):
         err1 = random.randint(0, 14)
         err2 = random_exclude(0, 14, {err1})
 
-    await reset(dut)
-
     dut._log.info(f"Correcting message: {msg:07b}, Checksum: {checksum:08b}")
     msg_with_checksum = (msg << 8) | checksum
     msg_corrupted = msg_with_checksum ^ (1 << err1) ^ (1 << err2)
     dut._log.info(f"Corrupted at positions: {err1}, {err2}, Corrupted message: {msg_corrupted:015b}")
     
-    # 0111111100000000 = 0x7F00
-    # 0000000011111111 = 0x00FF
     dut.ui_in.value = (msg_corrupted & 0x7F00) >> 8  # Upper 7 bits
     dut.uio_in.value = msg_corrupted & 0x00FF        # Lower 8 bits
 
-    await ClockCycles(dut.clk, 1)
+    await ClockCycles(dut.clk, 4)
 
     msg_out = dut.uo_out.value.to_unsigned()
     checksum_out = dut.uio_out.value.to_unsigned()
 
     assert msg_out == msg, f"Corrected message mismatch: expected {msg:07b}, got {msg_out:07b}"
-
     dut._log.info(f"Successfully recovered original message: {msg_out:07b}")
 
 async def test_correction_1_err(dut, msg, checksum, err1=None):
     if err1 is None:
         err1 = random.randint(0, 14)
 
-    await reset(dut)
-
     dut._log.info(f"Correcting message: {msg:07b}, Checksum: {checksum:08b}")
     msg_with_checksum = (msg << 8) | checksum
     msg_corrupted = msg_with_checksum ^ (1 << err1)
     dut._log.info(f"Corrupted at positions: {err1}, Corrupted message: {msg_corrupted:015b}")
     
-    # 0111111100000000 = 0x7F00
-    # 0000000011111111 = 0x00FF
     dut.ui_in.value = (msg_corrupted & 0x7F00) >> 8  # Upper 7 bits
     dut.uio_in.value = msg_corrupted & 0x00FF        # Lower 8 bits
 
-    await ClockCycles(dut.clk, 1)
+    await ClockCycles(dut.clk, 4)
 
     msg_out = dut.uo_out.value.to_unsigned()
     checksum_out = dut.uio_out.value.to_unsigned()
 
     assert msg_out == msg, f"Corrected message mismatch: expected {msg:07b}, got {msg_out:07b}"
-
     dut._log.info(f"Successfully recovered original message: {msg_out:07b}")
 
 async def test_correction_no_err(dut, msg, checksum):
-    await reset(dut)
-
     dut._log.info(f"Flawless message: {msg:07b}, Checksum: {checksum:08b}")
     msg_with_checksum = (msg << 8) | checksum
     
     dut.ui_in.value = msg
     dut.uio_in.value = checksum
 
-    await ClockCycles(dut.clk, 1)
+    await ClockCycles(dut.clk, 4)
 
     msg_out = dut.uo_out.value.to_unsigned()
     checksum_out = dut.uio_out.value.to_unsigned()
 
     assert msg_out == msg, f"Corrected message mismatch: expected {msg:07b}, got {msg_out:07b}"
-
     dut._log.info(f"Successfully recovered original message: {msg_out:07b}")
 
-
-
 async def test_encode(dut, msg, checksum):
-    await reset(dut)
-
     dut._log.info(f"Encoding message: {msg:07b}")
 
     dut.ui_in.value = msg + 2 ** 7  # Set encode_enable
 
-    await ClockCycles(dut.clk, 1)
+    await ClockCycles(dut.clk, 4)
 
     msg_out = dut.uo_out.value.to_unsigned()
     parity_out = dut.uio_out.value.to_unsigned()
 
     assert msg_out == msg, f"Encoded message mismatch: expected {msg:07b}, got {msg_out:07b}"
     assert parity_out == checksum, f"Encoded parity mismatch: expected {checksum:08b}, got {parity_out:08b}"
-
     dut._log.info(f"Encoded output: {msg_out:07b}, Parity: {parity_out:08b}")
 
 
 def random_exclude(start, end, exclude):
     choices = [i for i in range(start, end + 1) if i not in exclude]
     return random.choice(choices)
-

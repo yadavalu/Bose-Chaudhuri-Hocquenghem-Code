@@ -33,7 +33,7 @@ module tt_um_bch_code_15_7_2 (
   reg [7:0] encoder_parity_reg1, encoder_parity_reg2, encoder_parity_reg3;
 
   reg [3:0] S1_reg, S3_reg;
-  reg       error_detected_reg1, error_detected_reg2, error_detected_reg3;
+  reg error_detected_reg1, error_detected_reg2, error_detected_reg3;
   reg [11:0] error_locator_reg;
   reg [3:0] error_pos_1_reg, error_pos_2_reg;
   

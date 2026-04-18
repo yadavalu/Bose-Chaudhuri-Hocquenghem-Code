@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Aadith Yadav Govindarajan
+ * Copyright (c) 2026 Aadith Yadav Govindarajan
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -118,7 +118,7 @@ module tt_um_bch_code_15_7_2 (
   assign uo_out[7]   = 1'b0;
 
   // List all unused inputs to prevent warnings
-  wire _unused = &{ena, error_mask_1[7], error_mask_2[7], 1'b0};
+  wire _unused = &{ ena, error_mask_1[7], error_mask_2[7], delay_pipe_3[7:0], 1'b0 };
 
 endmodule
 

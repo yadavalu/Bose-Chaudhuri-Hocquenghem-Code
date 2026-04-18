@@ -1,7 +1,9 @@
 /*
- * Copyright (c) 2024 Aadith Yadav Govindarajan
+ * Copyright (c) 2026 Aadith Yadav Govindarajan
  * SPDX-License-Identifier: Apache-2.0
  */
+
+`include "bch_lookup.vh"
 
 module gf16_bch_encoder (
   input  wire [6:0] message,
@@ -19,13 +21,13 @@ module gf16_bch_encoder (
 
   assign parity = full_remainder[7:0]; 
 
-  wire _unused = &{ full_remainder[14:8] };
+  wire _unused = &{ full_remainder[14:8], 1'b0 };
 
 endmodule
 
 module gf16_bch_find_error (
-    input wire [14:0] received_poly,
-    output wire error_detected 
+  input wire [14:0] received_poly,
+  output wire error_detected 
 );
 
   localparam [8:0] GEN_MASK = 9'b111010001; 
@@ -42,39 +44,15 @@ module gf16_bch_find_error (
   // Check if remainder is non-zero
   assign error_detected = (final_remainder[7:0] != 8'b0);
 
-  wire _unused = &{ final_remainder[14:8] };
+  wire _unused = &{ final_remainder[14:8], 1'b0 };
 
 endmodule
 
 module bch_syndrome_calculator (
-    input wire [14:0] received_poly,
-    output wire [3:0] S1,
-    output wire [3:0] S3
+  input wire [14:0] received_poly,
+  output wire [3:0] S1,
+  output wire [3:0] S3
 );
-
-  function [3:0] alpha_power;
-    input [3:0] power;
-    begin
-      case (power)
-        4'd0:  alpha_power = 4'd1;
-        4'd1:  alpha_power = 4'd2;
-        4'd2:  alpha_power = 4'd4;
-        4'd3:  alpha_power = 4'd8;
-        4'd4:  alpha_power = 4'd3;
-        4'd5:  alpha_power = 4'd6;
-        4'd6:  alpha_power = 4'd12;
-        4'd7:  alpha_power = 4'd11;
-        4'd8:  alpha_power = 4'd5;
-        4'd9:  alpha_power = 4'd10;
-        4'd10: alpha_power = 4'd7;
-        4'd11: alpha_power = 4'd14;
-        4'd12: alpha_power = 4'd15;
-        4'd13: alpha_power = 4'd13;
-        4'd14: alpha_power = 4'd9;
-        default: alpha_power = 4'd0;
-      endcase
-    end
-  endfunction
 
   reg [3:0] s1_reg;
   reg [3:0] s3_reg;
@@ -98,7 +76,7 @@ module bch_syndrome_calculator (
   assign S1 = s1_reg;
   assign S3 = s3_reg;
 
-  wire _unused = &{ overflow[7:4] };
+  wire _unused = &{ overflow[7:4], 1'b0 };
 
 endmodule
 
@@ -107,54 +85,6 @@ module bch_error_locator (
   input wire [3:0] S3,
   output wire [11:0] error_locator
 );
-
-  function [3:0] alpha_power;
-    input [3:0] power;
-    begin
-      case (power)
-        4'd0:  alpha_power = 4'd1;
-        4'd1:  alpha_power = 4'd2;
-        4'd2:  alpha_power = 4'd4;
-        4'd3:  alpha_power = 4'd8;
-        4'd4:  alpha_power = 4'd3;
-        4'd5:  alpha_power = 4'd6;
-        4'd6:  alpha_power = 4'd12;
-        4'd7:  alpha_power = 4'd11;
-        4'd8:  alpha_power = 4'd5;
-        4'd9:  alpha_power = 4'd10;
-        4'd10: alpha_power = 4'd7;
-        4'd11: alpha_power = 4'd14;
-        4'd12: alpha_power = 4'd15;
-        4'd13: alpha_power = 4'd13;
-        4'd14: alpha_power = 4'd9;
-        default: alpha_power = 4'd0;
-      endcase
-    end
-  endfunction
-
-  function [3:0] value_to_power;
-    input [3:0] value;
-    begin
-      case (value)
-        4'd1:  value_to_power = 4'd0;
-        4'd2:  value_to_power = 4'd1;
-        4'd4:  value_to_power = 4'd2;
-        4'd8:  value_to_power = 4'd3;
-        4'd3:  value_to_power = 4'd4;
-        4'd6:  value_to_power = 4'd5;
-        4'd12: value_to_power = 4'd6;
-        4'd11: value_to_power = 4'd7;
-        4'd5:  value_to_power = 4'd8;
-        4'd10: value_to_power = 4'd9;
-        4'd7:  value_to_power = 4'd10;
-        4'd14: value_to_power = 4'd11;
-        4'd15: value_to_power = 4'd12;
-        4'd13: value_to_power = 4'd13;
-        4'd9:  value_to_power = 4'd14;
-        default: value_to_power = 4'd0; // Placeholder for error handling
-      endcase
-    end
-  endfunction
 
   reg [3:0] sigma_1, sigma_2;
   wire [3:0] s1_pow, s1_inv_pow, numerator;
@@ -185,7 +115,7 @@ module bch_error_locator (
   // L(x) = sigma_2 * x^2 + sigma_1 * x + 1
   assign error_locator = {sigma_2, sigma_1, 4'b1};
 
-  wire _unused = &{ exponent[7:4] };
+  wire _unused = &{ exponent[7:4], 1'b0 };
 
 endmodule
 
@@ -194,54 +124,6 @@ module bch_chien_search_roots (
   output wire [3:0] error_pos_1,
   output wire [3:0] error_pos_2
 );
-
-  function [3:0] alpha_power;
-    input [3:0] power;
-    begin
-      case (power)
-        4'd0:  alpha_power = 4'd1;
-        4'd1:  alpha_power = 4'd2;
-        4'd2:  alpha_power = 4'd4;
-        4'd3:  alpha_power = 4'd8;
-        4'd4:  alpha_power = 4'd3;
-        4'd5:  alpha_power = 4'd6;
-        4'd6:  alpha_power = 4'd12;
-        4'd7:  alpha_power = 4'd11;
-        4'd8:  alpha_power = 4'd5;
-        4'd9:  alpha_power = 4'd10;
-        4'd10: alpha_power = 4'd7;
-        4'd11: alpha_power = 4'd14;
-        4'd12: alpha_power = 4'd15;
-        4'd13: alpha_power = 4'd13;
-        4'd14: alpha_power = 4'd9;
-        default: alpha_power = 4'd0;
-      endcase
-    end
-  endfunction
-
-  function [3:0] value_to_power;
-    input [3:0] value;
-    begin
-      case (value)
-        4'd1:  value_to_power = 4'd0;
-        4'd2:  value_to_power = 4'd1;
-        4'd4:  value_to_power = 4'd2;
-        4'd8:  value_to_power = 4'd3;
-        4'd3:  value_to_power = 4'd4;
-        4'd6:  value_to_power = 4'd5;
-        4'd12: value_to_power = 4'd6;
-        4'd11: value_to_power = 4'd7;
-        4'd5:  value_to_power = 4'd8;
-        4'd10: value_to_power = 4'd9;
-        4'd7:  value_to_power = 4'd10;
-        4'd14: value_to_power = 4'd11;
-        4'd15: value_to_power = 4'd12;
-        4'd13: value_to_power = 4'd13;
-        4'd9:  value_to_power = 4'd14;
-        default: value_to_power = 4'd0; // Placeholder for error handling
-      endcase
-    end
-  endfunction
 
   wire [3:0] sigma_2 = error_locator[11:8];
   wire [3:0] sigma_1 = error_locator[7:4];
@@ -300,7 +182,7 @@ module bch_chien_search_roots (
   assign error_pos_1 = pos1_reg;
   assign error_pos_2 = pos2_reg;
 
-  wire _unused = &{ term1_help2[7:4], term2_help2[7:4] };
+  wire _unused = &{ term1_help2[7:4], term2_help2[7:4], 1'b0 };
 
 endmodule
 
